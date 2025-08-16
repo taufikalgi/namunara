@@ -1,5 +1,8 @@
 {
   "chat-gpt": {
     "api-key": "your-api-key"
+  },
+  "discord": {
+    "token" : "your-discord-bot-token"
   }
 }
