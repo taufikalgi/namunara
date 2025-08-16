@@ -2,7 +2,7 @@ import json
 import discord
 from discord.ext import commands
 from openai import OpenAI
-# --- Config ---
+
 with open("config/config.json", "r", encoding="utf-8") as f:
     config = json.load(f)
 
@@ -19,7 +19,6 @@ LANGUAGE_CHANNELS = {
     "korean": "Korean"
 }
 
-# --- Setup ---
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -29,9 +28,10 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 webhook_cache = {}
 
 translation_map = {
-    "english": [("korean", "kr"), ("indonesian", "id")],
-    "indonesian": [("korean", "kr"), ("english", "en")],
-    "korean": [("english", "en"), ("indonesian", "id")],
+    "en": [("kr", "kr"), ("id", "id"), ("pl", "pl")],
+    "id": [("kr", "kr"), ("en", "en"), ("pl", "pl")],
+    "kr": [("en", "en"), ("id", "id"), ("pl", "pl")],
+    "pl": [("kr", "kr"), ("id", "id"), ("en", "en")],
 }
 
 async def get_webhook(guild: discord.Guild, channel_ref):
@@ -60,7 +60,6 @@ async def get_webhook(guild: discord.Guild, channel_ref):
     webhook_cache[cache_key] = webhook
     return webhook
 
-# --- Helper: Translate ---
 def translate_text(text: str, target_language: str) -> str:
     """
     Use GPT-5-mini for cost-effective translations.
@@ -74,7 +73,6 @@ def translate_text(text: str, target_language: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-# --- Events ---
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
@@ -89,13 +87,10 @@ async def on_message(message):
     if src_channel in translation_map:
         for target_channel_name, target_lang in translation_map[src_channel]:
             try:
-                # Translate
                 translated = translate_text(message.content, target_lang)
 
-                # Get target channel webhook
                 webhook = await get_webhook(message.guild, target_channel_name)
 
-                # Send as user
                 await webhook.send(
                     content=translated,
                     username=message.author.display_name,
@@ -105,7 +100,6 @@ async def on_message(message):
             except Exception as e:
                 print(f"Error translating to {target_channel_name}: {e}")
 
-# --- Run ---
 if __name__ == "__main__":
     if not DISCORD_TOKEN or not OPENAI_API_KEY:
         raise ValueError("Missing DISCORD_TOKEN or OPENAI_API_KEY in environment variables")
