@@ -1,20 +1,22 @@
 from discord.ext import commands
-from openai import OpenAI
 import discord
 
-class Translation(commands.Cog):
+class TranslationCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.client = bot.openai_client
         self.webhook_cache = {}
         self.translation_map = {
-            "en": [("kr", "kr"), ("id", "id"), ("pl", "pl")],
-            "id": [("kr", "kr"), ("en", "en"), ("pl", "pl")],
-            "kr": [("en", "en"), ("id", "id"), ("pl", "pl")],
-            "pl": [("kr", "kr"), ("id", "id"), ("en", "en")],
+            "en": [("id", "id")],
+            "id": [("en", "en")],
+            # "en": [("kr", "kr"), ("id", "id"), ("pl", "pl")],
+            # "id": [("kr", "kr"), ("en", "en"), ("pl", "pl")],
+            # "kr": [("en", "en"), ("id", "id"), ("pl", "pl")],
+            # "pl": [("kr", "kr"), ("id", "id"), ("en", "en")],
         }
 
-    async def get_webhook(guild: discord.Guild, channel_ref):
+    async def get_webhook(self, guild: discord.Guild, channel_ref):
         if isinstance(channel_ref, discord.TextChannel):
             channel = channel_ref
             channel_name = channel.name
@@ -40,11 +42,11 @@ class Translation(commands.Cog):
         self.webhook_cache[cache_key] = webhook
         return webhook
 
-    def translate_text(text: str, target_language: str) -> str:
+    def translate_text(self, text: str, target_language: str) -> str:
         """
         Use GPT-5-mini for cost-effective translations.
         """
-        response = client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a translation engine. Translate text into {target_language}. Do not add commentary."},
@@ -52,6 +54,10 @@ class Translation(commands.Cog):
             ]
         )
         return response.choices[0].message.content.strip()
+    
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print("Translation cog loaded")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -77,5 +83,5 @@ class Translation(commands.Cog):
                     print(f"Error translating to {target_channel_name}: {e}")
 
 
-async def setup(bot: commands.Bot, client: OpenAI):
-    await bot.add_cog(Translation(bot, client))
+async def setup(bot: commands.Bot):
+    await bot.add_cog(TranslationCog(bot))

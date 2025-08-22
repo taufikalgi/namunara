@@ -20,23 +20,24 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-@bot.event
-async def on_guild_join(guild):
-    me = guild.me  
-
-    try:
-        await me.edit(nick="Namu Bot")
-        print(f"Nickname set in {guild.name}")
-    except Exception as e:
-        print(f"Could not change nickname in {guild.name}: {e}")
-
-@bot.event
-
 async def main():
-    await bot.load_extension("cogs.translation", extras = {"client": client})
+    bot.openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+    extensions = [
+        "cogs.translation",
+        "cogs.guild_cog",
+    ]
+
+    for ext in extensions:
+        try:
+            await bot.load_extension(ext)
+            print(f"Loaded extension {ext}")
+        except Exception as e:
+            print(f"Failed to load {ext}: {e}")
+    await bot.start(DISCORD_TOKEN)
 
 if __name__ == "__main__":
     if not DISCORD_TOKEN or not OPENAI_API_KEY:
         raise ValueError("Missing DISCORD_TOKEN or OPENAI_API_KEY in environment variables")
-    bot.run(DISCORD_TOKEN)
-    asyncio(main())
+    
+    asyncio.run(main())
