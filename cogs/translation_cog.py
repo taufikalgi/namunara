@@ -1,0 +1,104 @@
+from discord.ext import commands
+from repository.db import async_session
+from repository.guild_repository import *
+import discord
+
+class TranslationCog(commands.Cog):
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.client = bot.openai_client
+        self.webhook_cache = {}
+        self.translation_map = {
+            "en": [("id", "id")],
+            "id": [("en", "en")],
+            # "en": [("kr", "kr"), ("id", "id"), ("pl", "pl")],
+            # "id": [("kr", "kr"), ("en", "en"), ("pl", "pl")],
+            # "kr": [("en", "en"), ("id", "id"), ("pl", "pl")],
+            # "pl": [("kr", "kr"), ("id", "id"), ("en", "en")],
+        }
+
+    async def get_webhook(self, guild: discord.Guild, channel_ref):
+        if isinstance(channel_ref, discord.TextChannel):
+            channel = channel_ref
+            channel_name = channel.name
+        elif isinstance(channel_ref, str):
+            channel = discord.utils.get(guild.text_channels, name=channel_ref)
+            if channel is None:
+                raise ValueError(f"Channel '{channel_ref}' not found in guild '{guild.name}'.")
+            channel_name = channel_ref
+        else:
+            raise TypeError("channel_ref must be a discord.TextChannel or str")
+
+        cache_key = f"{guild.id}:{channel_name}"
+
+        if cache_key in self.webhook_cache:
+            return self.webhook_cache[cache_key]
+
+        webhooks = await channel.webhooks()
+        if webhooks:
+            webhook = webhooks[0]
+        else:
+            webhook = await channel.create_webhook(name="TranslationBot")
+
+        self.webhook_cache[cache_key] = webhook
+        return webhook
+
+    def translate_text(self, text: str, target_language: str) -> str:
+        """
+        Use GPT-5-mini for cost-effective translations.
+        """
+        response = self.client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": f"You are a translation engine. Translate text into {target_language}. Do not add commentary."},
+                {"role": "user", "content": text}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print("Translation cog loaded")
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.bot:
+            return
+        
+        if message.guild and message.guild.id:
+            try:
+                async with async_session() as session:
+                    async with session.begin():
+                        allow_translation = await get_guild_allow_translation_by_guild_id(
+                            session=session,
+                            guild_id=message.guild.id
+                        )
+                        if not allow_translation:
+                            print(f"Guild {message.guild.name} ({message.guild.id}) does not have permission to translate message!")
+                            return
+                        
+            except Exception as e:
+                print(f"Guild with id: {message.guild.id} does not exists! {e}")
+
+        src_channel = message.channel.name
+
+        if src_channel in self.translation_map:
+            for target_channel_name, target_lang in self.translation_map[src_channel]:
+                try:
+                    translated = self.translate_text(message.content, target_lang)
+
+                    webhook = await self.get_webhook(message.guild, target_channel_name)
+
+                    await webhook.send(
+                        content=translated,
+                        username=message.author.display_name,
+                        avatar_url=message.author.display_avatar.url
+                    )
+
+                except Exception as e:
+                    print(f"Error translating to {target_channel_name}: {e}")
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(TranslationCog(bot))
