@@ -18,6 +18,13 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 @bot.event
 async def on_ready():
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
+        
     print(f"Logged in as {bot.user}")
 
 async def main():

@@ -1,6 +1,8 @@
+from discord import app_commands
 from discord.ext import commands
+from models import GuildModel, TranslationChannelModel
 from repository.db import async_session
-from repository.guild_repository import *
+from repository import guild_repository, translation_channel_repository
 import discord
 
 class TranslationCog(commands.Cog):
@@ -9,14 +11,14 @@ class TranslationCog(commands.Cog):
         self.bot = bot
         self.client = bot.openai_client
         self.webhook_cache = {}
-        self.translation_map = {
-            "en": [("id", "id")],
-            "id": [("en", "en")],
-            # "en": [("kr", "kr"), ("id", "id"), ("pl", "pl")],
-            # "id": [("kr", "kr"), ("en", "en"), ("pl", "pl")],
-            # "kr": [("en", "en"), ("id", "id"), ("pl", "pl")],
-            # "pl": [("kr", "kr"), ("id", "id"), ("en", "en")],
-        }
+        # self.translation_map = {
+        #     "en": [("id", "id")],
+        #     "id": [("en", "en")],
+        #     # "en": [("kr", "kr"), ("id", "id"), ("pl", "pl")],
+        #     # "id": [("kr", "kr"), ("en", "en"), ("pl", "pl")],
+        #     # "kr": [("en", "en"), ("id", "id"), ("pl", "pl")],
+        #     # "pl": [("kr", "kr"), ("id", "id"), ("en", "en")],
+        # }
 
     async def get_webhook(self, guild: discord.Guild, channel_ref):
         if isinstance(channel_ref, discord.TextChannel):
@@ -70,7 +72,7 @@ class TranslationCog(commands.Cog):
             try:
                 async with async_session() as session:
                     async with session.begin():
-                        allow_translation = await get_guild_allow_translation_by_guild_id(
+                        allow_translation = await guild_repository.get_guild_allow_translation_by_guild_id(
                             session=session,
                             guild_id=message.guild.id
                         )
@@ -99,6 +101,48 @@ class TranslationCog(commands.Cog):
                 except Exception as e:
                     print(f"Error translating to {target_channel_name}: {e}")
 
+    @app_commands.command(
+        name="add_translation_channel",
+        description="Add a channel as a translation channel"
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def add_translation_channel(self, 
+        interaction: discord.Interaction, 
+        channel: discord.TextChannel, 
+        language: str
+    ):
+        async with async_session() as session:
+            try:
+                guild = await guild_repository.get_guild_by_guild_id(
+                    session=session, 
+                    guild_id=interaction.guild_id
+                )
+                if not guild:
+                    # not sure if it's better to add it to database or raise custom exception GuildNotFound
+                    guild = GuildModel(
+                        guild_id=interaction.guild_id,
+                        name=interaction.guild.name
+                    )
+                    await guild_repository.add_guild(guild)
+                    await session.flush()
+
+                translation_channel = TranslationChannelModel(
+                    channel_id=channel.id,
+                    language=language,
+                    guild_id=guild.id
+                )
+
+                await translation_channel_repository.add_translation_channel(session=session, new_translation_channel=translation_channel)
+                await interaction.response.send_message(
+                    f"{channel.mention} added as a translation channel for `{language}`"
+                )
+
+            except Exception as e:
+                await session.rollback()
+                await interaction.response.send_message(
+                    f"Failed to add channel: {e}",
+                    ephemeral=True
+                )
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(TranslationCog(bot))
