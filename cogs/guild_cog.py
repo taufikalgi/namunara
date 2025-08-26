@@ -22,7 +22,7 @@ class GuildCog(commands.Cog):
                 async with session.begin():
                     guild_id = guild.id
                     guild_name = guild.name
-                    guild_db = await session.get(GuildModel, guild.id)
+                    guild_db = await get_guild_by_guild_id(session=session, guild_id=guild_id)
 
                     if not guild_db:
                         new_guild = GuildModel(guild_id=guild_id, name=guild_name)
@@ -37,6 +37,22 @@ class GuildCog(commands.Cog):
 
         except Exception as e:
             print(f"Could not change nickname in {guild.name}: {e}")
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild: discord.Guild):
+        try:
+            async with async_session() as session:
+                async with session.begin():
+                    guild_db = await get_guild_by_guild_id(session=session, guild_id=guild.id)
+                    print(f"{guild_db.name} ({guild_db.guild_id})")
+
+                    if guild_db:
+                        await delete_guild(session=session, guild=guild_db)
+                        print(f"Removed guild from DB: {guild.name} ({guild.id})")
+                        
+        except Exception as e:
+            print(f"Error while removing guild in {guild.name} ({guild.id}): {e}")
+
 
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild):
