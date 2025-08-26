@@ -23,7 +23,6 @@ async def get_guild_allow_translation_by_guild_id(session: AsyncSession, guild_i
         result = await session.execute(
             select(GuildModel.allow_translation).where(GuildModel.guild_id == guild_id)
         )
-        print(result.scalar_one_or_none())
         allow_translation = result.scalar_one_or_none()
 
     except Exception as e:

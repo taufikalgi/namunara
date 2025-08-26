@@ -1,4 +1,6 @@
 from discord.ext import commands
+from repository.db import async_session
+from repository.guild_repository import *
 import discord
 
 class TranslationCog(commands.Cog):
@@ -63,6 +65,21 @@ class TranslationCog(commands.Cog):
     async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
+        
+        if message.guild and message.guild.id:
+            try:
+                async with async_session() as session:
+                    async with session.begin():
+                        allow_translation = await get_guild_allow_translation_by_guild_id(
+                            session=session,
+                            guild_id=message.guild.id
+                        )
+                        if not allow_translation:
+                            print(f"Guild {message.guild.name} ({message.guild.id}) does not have permission to translate message!")
+                            return
+                        
+            except Exception as e:
+                print(f"Guild with id: {message.guild.id} does not exists! {e}")
 
         src_channel = message.channel.name
 

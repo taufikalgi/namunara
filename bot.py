@@ -24,7 +24,7 @@ async def main():
     bot.openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
     extensions = [
-        "cogs.translation",
+        "cogs.translation_cog",
         "cogs.guild_cog",
     ]
 
