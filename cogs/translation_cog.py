@@ -45,6 +45,19 @@ class TranslationCog(commands.Cog):
 
         self.webhook_cache[cache_key] = webhook
         return webhook
+    
+    async def get_webhook_by_channel_id(self, guild: discord.Guild, channel_id: int) -> discord.Webhook:
+        channel = guild.get_channel(channel_id)
+        if channel is None or not isinstance(channel, discord.TextChannel):
+            raise ValueError(f"Channel with ID {channel_id} not found in guild {guild.name}")
+        
+        # cache webhooks
+        webhooks = await channel.webhooks()
+        if webhooks:
+            return webhooks[0]
+        
+        webhooks = await channel.create_webhook(name="TranslationBot")
+        return webhooks
 
     def translate_text(self, text: str, target_language: str) -> str:
         """
@@ -83,23 +96,58 @@ class TranslationCog(commands.Cog):
             except Exception as e:
                 print(f"Guild with id: {message.guild.id} does not exists! {e}")
 
-        src_channel = message.channel.name
-
-        if src_channel in self.translation_map:
-            for target_channel_name, target_lang in self.translation_map[src_channel]:
-                try:
-                    translated = self.translate_text(message.content, target_lang)
-
-                    webhook = await self.get_webhook(message.guild, target_channel_name)
-
-                    await webhook.send(
-                        content=translated,
-                        username=message.author.display_name,
-                        avatar_url=message.author.display_avatar.url
+        src_channel = message.channel.id
+        try:
+            async with async_session() as session:
+                async with session.begin():
+                    guild = await guild_repository.get_guild_by_guild_id(
+                        session=session,
+                        guild_id=message.guild.id
                     )
 
-                except Exception as e:
-                    print(f"Error translating to {target_channel_name}: {e}")
+                    translation_channel_list = await translation_channel_repository.get_translation_channel_by_guild_id(
+                        session=session,
+                        guild_id=guild.id
+                    )
+        except Exception as e:
+            print(f"Error while fetching translation channels for guild {message.guild.id}: {e}")
+
+        print(translation_channel_list)
+
+        for target_channel in translation_channel_list:
+            if target_channel.channel_id == src_channel:
+                continue
+
+            try:
+                translated = self.translate_text(message.content, target_language=target_channel.language)
+
+                webhook = await self.get_webhook_by_channel_id(message.guild, target_channel.channel_id)
+
+                await webhook.send(
+                    content=translated,
+                    username=message.author.display_name,
+                    avatar_url=message.author.display_avatar.url
+                )
+
+            except Exception as e:
+                print(f"Error translating to {target_channel.id}: {e}")
+
+        # if src_channel in self.translation_map:
+        #     print("Masuk translation map")
+        #     for target_channel_name, target_lang in self.translation_map[src_channel]:
+        #         try:
+        #             translated = self.translate_text(message.content, target_lang)
+
+        #             webhook = await self.get_webhook(message.guild, target_channel_name)
+
+        #             await webhook.send(
+        #                 content=translated,
+        #                 username=message.author.display_name,
+        #                 avatar_url=message.author.display_avatar.url
+        #             )
+
+        #         except Exception as e:
+        #             print(f"Error translating to {target_channel_name}: {e}")
 
     @app_commands.command(
         name="add_translation_channel",
