@@ -7,23 +7,24 @@ import os
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
-
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+
 @bot.event
 async def on_ready():
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s)")
-    
+
     except Exception as e:
         print(f"Failed to sync commands: {e}")
-        
+
     print(f"Logged in as {bot.user}")
+
 
 async def main():
     bot.openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -41,8 +42,11 @@ async def main():
             print(f"Failed to load {ext}: {e}")
     await bot.start(DISCORD_TOKEN)
 
+
 if __name__ == "__main__":
     if not DISCORD_TOKEN or not OPENAI_API_KEY:
-        raise ValueError("Missing DISCORD_TOKEN or OPENAI_API_KEY in environment variables")
-    
+        raise ValueError(
+            "Missing DISCORD_TOKEN or OPENAI_API_KEY in environment variables"
+        )
+
     asyncio.run(main())
