@@ -49,15 +49,24 @@ class TranslationCog(commands.Cog):
     async def get_webhook_by_channel_id(self, guild: discord.Guild, channel_id: int) -> discord.Webhook:
         channel = guild.get_channel(channel_id)
         if channel is None or not isinstance(channel, discord.TextChannel):
-            raise ValueError(f"Channel with ID {channel_id} not found in guild {guild.name}")
-        
-        # cache webhooks
+            raise ValueError(f"Channel {channel_id} not found")
+
         webhooks = await channel.webhooks()
-        if webhooks:
-            return webhooks[0]
-        
-        webhooks = await channel.create_webhook(name="TranslationBot")
-        return webhooks
+
+        for wh in webhooks:
+            try:
+                # Attempt to refetch --> this fails if no token exists
+                full = await self.bot.fetch_webhook(wh.id)
+                return full
+            except discord.NotFound:
+                continue
+            except discord.HTTPException:
+                # Webhook exists but has no token --> delete & recreate
+                await wh.delete()
+
+        # If none usable, create a new one
+        return await channel.create_webhook(name="TranslationBot")
+
 
     def translate_text(self, text: str, target_language: str) -> str:
         """
@@ -120,6 +129,7 @@ class TranslationCog(commands.Cog):
 
             try:
                 translated = self.translate_text(message.content, target_language=target_channel.language)
+                print(translated)
 
                 webhook = await self.get_webhook_by_channel_id(message.guild, target_channel.channel_id)
 
@@ -130,7 +140,7 @@ class TranslationCog(commands.Cog):
                 )
 
             except Exception as e:
-                print(f"Error translating to {target_channel.id}: {e}")
+                print(f"Error translating to channel={target_channel.channel_id}: {e}")
 
         # if src_channel in self.translation_map:
         #     print("Masuk translation map")

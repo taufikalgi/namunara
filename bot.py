@@ -1,13 +1,11 @@
 from discord.ext import commands
 from openai import OpenAI
-from utils.config import load_config
 import asyncio
 import discord
+import os
 
-config = load_config()
-
-OPENAI_API_KEY = config["chat-gpt"]["api-key"]
-DISCORD_TOKEN = config["discord"]["token"]
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 
 intents = discord.Intents.default()

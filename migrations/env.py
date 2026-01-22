@@ -10,15 +10,16 @@ from models import Base
 import asyncio
 import asyncpg
 import json
+import os
 
-with open("config/config.json", "r", encoding = "utf-8") as f:
-    config_data = json.load(f)
+# with open("config/config.json", "r", encoding = "utf-8") as f:
+#     config_data = json.load(f)
 
-username = config_data["database"]["username"]
-password = config_data["database"]["password"]
-database_name = config_data["database"]["database_name"]
+# username = config_data["database"]["username"]
+# password = config_data["database"]["password"]
+# database_name = config_data["database"]["database_name"]
 
-database_url = "postgresql+asyncpg://" + username + ":" + password + "@localhost:5432/" + database_name
+database_url = os.getenv("DATABASE_URL")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
