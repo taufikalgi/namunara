@@ -1,5 +1,6 @@
 from sqlalchemy import ForeignKey, String, BigInteger, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import List
 from .base import Base
 
 
@@ -13,4 +14,9 @@ class TranslationChannelModel(Base):
     guild_id: Mapped[int] = mapped_column(ForeignKey("guilds.id"))
     guild: Mapped["GuildModel"] = relationship(
         "GuildModel", back_populates="translation_channels"
+    )
+    message_mappings: Mapped[List["MessageMappingModel"]] = relationship(
+        "MessageMappingModel",
+        back_populates="translation_channel",
+        cascade="all, delete-orphan",
     )

@@ -37,7 +37,6 @@ async def get_guild_allow_translation_by_guild_id(session: AsyncSession, guild_i
 async def delete_guild(session: AsyncSession, guild: GuildModel):
     try:
         await session.delete(guild)
-        await session.commit()
 
     except Exception as e:
         print(f"Cannot delete {guild.name} ({guild.guild_id}) {e}")
