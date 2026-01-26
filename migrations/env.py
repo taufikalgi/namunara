@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from logging.config import fileConfig
 
 from sqlalchemy import text
@@ -19,7 +20,11 @@ import os
 # password = config_data["database"]["password"]
 # database_name = config_data["database"]["database_name"]
 
-database_url = os.getenv("DATABASE_URL")
+load_dotenv()
+
+database_url = os.getenv("DATABASE_URL_ENV")
+if not database_url:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -43,6 +48,7 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+
 async def create_database_if_not_exists(database_url: str, database_name: str):
     # default_url = database_url.rsplit("/", 1)[0] + "/postgres"
     # engine = create_async_engine(default_url, poolclass=None)
@@ -56,22 +62,29 @@ async def create_database_if_not_exists(database_url: str, database_name: str):
 
     #     if not exists:
     #         conn_autocommit = await conn.execution_options(isolation_level="AUTOCOMMIT")
-    
+
     #         await conn_autocommit.execute(text(f'CREATE DATABASE "{database_name}"'))
     #         print(f"Database '{database_name}' created.")
 
     # await engine.dispose()
-    conn = await asyncpg.connect(user=username, password=password, host="localhost", port="5432", database=database_name)
-    
+    conn = await asyncpg.connect(
+        user=username,
+        password=password,
+        host="localhost",
+        port="5432",
+        database=database_name,
+    )
+
     exists = await conn.fetchval(
         "SELECT 1 FROM pg_database WHERE datname = $1", database_name
     )
-    
+
     if not exists:
         await conn.execute(f'CREATE DATABASE "{database_name}"')
         print(f"Database '{database_name}' created.")
-    
+
     await conn.close()
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -91,11 +104,12 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True
+        compare_type=True,
     )
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 def do_run_migrations(connection):
     context.configure(
@@ -106,6 +120,7 @@ def do_run_migrations(connection):
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 async def run_migrations_online() -> None:
     """Run migrations in 'online' mode.

@@ -4,6 +4,7 @@ from repository.guild_repository import *
 from repository.db import async_session
 import discord
 
+
 class GuildCog(commands.Cog):
     def __init__(self, bot):
         super().__init__()
@@ -22,15 +23,20 @@ class GuildCog(commands.Cog):
                 async with session.begin():
                     guild_id = guild.id
                     guild_name = guild.name
-                    guild_db = await get_guild_by_guild_id(session=session, guild_id=guild_id)
+                    guild_db = await get_guild_by_guild_id(
+                        session=session, guild_id=guild_id
+                    )
+
+                    # print(f"{guild_db} {guild_db.name} ({guild_db.guild_id})")
 
                     if not guild_db:
+                        print(f"Adding guild to DB: {guild.name} ({guild.id})")
                         new_guild = GuildModel(guild_id=guild_id, name=guild_name)
                         await add_guild(session, new_guild)
 
                         print(f"Added new guild: {guild.name} ({guild.id})")
 
-            me = guild.me  
+            me = guild.me
 
             await me.edit(nick="Namu Bot")
             print(f"Nickname set in {guild.name}")
@@ -43,16 +49,17 @@ class GuildCog(commands.Cog):
         try:
             async with async_session() as session:
                 async with session.begin():
-                    guild_db = await get_guild_by_guild_id(session=session, guild_id=guild.id)
+                    guild_db = await get_guild_by_guild_id(
+                        session=session, guild_id=guild.id
+                    )
                     print(f"{guild_db.name} ({guild_db.guild_id})")
 
                     if guild_db:
                         await delete_guild(session=session, guild=guild_db)
                         print(f"Removed guild from DB: {guild.name} ({guild.id})")
-                        
+
         except Exception as e:
             print(f"Error while removing guild in {guild.name} ({guild.id}): {e}")
-
 
     @commands.Cog.listener()
     async def on_guild_update(self, before: discord.Guild, after: discord.Guild):

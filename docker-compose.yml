@@ -3,24 +3,12 @@ services:
     build: .
     container_name: namunara_bot
     restart: unless-stopped
-    depends_on:
-      - db
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
+    networks:
+      - namunara_network
 
-  db:
-    image: postgres:16
-    container_name: namunara_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5433:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-volumes:
-  pgdata:
+networks:
+  namunara_network:
+    external: true
