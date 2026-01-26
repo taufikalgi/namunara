@@ -130,10 +130,9 @@ class TranslationCog(commands.Cog):
 
             print(f"  -> Processing translation to {target_channel.channel_id}")
             try:
-                translated = "place holder translation"
-                # translated = self.translate_text(
-                #     message.content, target_language=target_channel.language
-                # )
+                translated = self.translate_text(
+                    message.content, target_language=target_channel.language
+                )
                 print(f"  -> Translated: {translated}")
 
                 webhook = await self.get_webhook_by_channel_id(
