@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey, String, BigInteger, Integer, Text
+from datetime import datetime
+from sqlalchemy import ForeignKey, BigInteger, Integer, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
@@ -19,4 +20,14 @@ class MessageMappingModel(Base):
     )
     translation_channel: Mapped["TranslationChannelModel"] = relationship(
         "TranslationChannelModel"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
