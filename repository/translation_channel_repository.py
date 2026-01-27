@@ -1,5 +1,4 @@
-from models import GuildModel, TranslationChannelModel
-from repository.guild_repository import get_guild_by_guild_id
+from models import TranslationChannelModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,18 +35,4 @@ async def get_id_by_channel_id(session: AsyncSession, channel_id: int):
 
     except Exception as e:
         print(f"Error fetching translation channel for channel_id {channel_id}: {e}")
-        return None
-
-
-async def get_channel_id_by_id(session: AsyncSession, id: int):
-    try:
-        result = await session.execute(
-            select(TranslationChannelModel.channel_id).where(
-                TranslationChannelModel.id == id
-            )
-        )
-        return result.scalars().first()
-
-    except Exception as e:
-        print(f"Error fetching translation channel_id for id {id}: {e}")
         return None

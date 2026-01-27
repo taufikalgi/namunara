@@ -63,8 +63,8 @@ class TranslationCog(commands.Cog):
             async with async_session() as session:
                 async with session.begin():
                     allow_translation = (
-                        await guild_repository.get_guild_allow_translation_by_guild_id(
-                            session=session, guild_id=guild.id
+                        await guild_repository.get_guild_allow_translation_by_id(
+                            session=session, id=guild.id
                         )
                     )
                     if not allow_translation:
@@ -100,12 +100,8 @@ class TranslationCog(commands.Cog):
         try:
             async with async_session() as session:
                 async with session.begin():
-                    guild = await guild_repository.get_guild_by_guild_id(
-                        session=session, guild_id=message.guild.id
-                    )
-
                     translation_channel_list = await translation_channel_repository.get_translation_channel_by_guild_id(
-                        session=session, guild_id=guild.id
+                        session=session, guild_id=message.guild.id
                     )
         except Exception as e:
             print(
@@ -120,15 +116,15 @@ class TranslationCog(commands.Cog):
             )
             print(f" -> Referenced message: {ref_message.content}")
 
-        print(translation_channel_list)
+        print(translation_channel_list, len(translation_channel_list))
 
         print(f"Source channel: {src_channel}")
         for target_channel in translation_channel_list:
-            if target_channel.channel_id == src_channel:
+            if target_channel.id == src_channel:
                 print(f"  -> Skipping (same as source)")
                 continue
 
-            print(f"  -> Processing translation to {target_channel.channel_id}")
+            print(f"  -> Processing translation to {target_channel.id}")
             try:
                 translated = self.translate_text(
                     message.content, target_language=target_channel.language
@@ -136,13 +132,13 @@ class TranslationCog(commands.Cog):
                 print(f"  -> Translated: {translated}")
 
                 webhook = await self.get_webhook_by_channel_id(
-                    message.guild, target_channel.channel_id
+                    message.guild, target_channel.id
                 )
 
                 if ref_message is not None:
                     translation_channel_id = (
                         await translation_channel_repository.get_id_by_channel_id(
-                            session=session, channel_id=target_channel.channel_id
+                            session=session, channel_id=target_channel.id
                         )
                     )
                     translated_ref_message = await message_mapping_repository.get_translated_message_by_original_message_id_and_translation_channel_id(
@@ -157,7 +153,7 @@ class TranslationCog(commands.Cog):
                         print(
                             f"  -> Found translated reference message id: {translated_ref_message.translated_message_id}"
                         )
-                        translated += f"\n\n[In reply to this message](https://discord.com/channels/{message.guild.id}/{target_channel.channel_id}/{translated_ref_message.translated_message_id})"
+                        translated += f"\n\n[In reply to this message](https://discord.com/channels/{message.guild.id}/{target_channel.id}/{translated_ref_message.translated_message_id})"
 
                 print(f"  -> Got webhook: {webhook.id}")
                 sent_message = await webhook.send(
@@ -182,7 +178,7 @@ class TranslationCog(commands.Cog):
                         )
 
             except Exception as e:
-                print(f"Error translating to channel={target_channel.channel_id}: {e}")
+                print(f"Error translating to channel={target_channel.id}: {e}")
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -218,16 +214,13 @@ class TranslationCog(commands.Cog):
                         f"Found {len(mappings)} mappings for original message id {before.id}"
                     )
 
-                    guild_id = await guild_repository.get_id_by_guild_id(
-                        session=session, guild_id=after.guild.id
-                    )
                     translation_channel_list = await translation_channel_repository.get_translation_channel_by_guild_id(
                         session=session,
-                        guild_id=guild_id,
+                        guild_id=after.guild.id,
                     )
 
                     channel_lang_map = {
-                        tc.channel_id: tc.language for tc in translation_channel_list
+                        tc.id: tc.language for tc in translation_channel_list
                     }
 
         except Exception as e:
@@ -239,12 +232,7 @@ class TranslationCog(commands.Cog):
         print(channel_lang_map)
         for mapping in mappings:
             try:
-                target_channel_id = (
-                    await translation_channel_repository.get_channel_id_by_id(
-                        session=session,
-                        id=mapping.translation_channel_id,
-                    )
-                )
+                target_channel_id = mapping.translation_channel_id
                 target_language = channel_lang_map.get(target_channel_id)
                 if not target_language:
                     print(
@@ -288,19 +276,19 @@ class TranslationCog(commands.Cog):
     ):
         async with async_session() as session:
             try:
-                guild = await guild_repository.get_guild_by_guild_id(
-                    session=session, guild_id=interaction.guild_id
+                guild = await guild_repository.get_guild_by_id(
+                    session=session, id=interaction.guild_id
                 )
                 if not guild:
                     # not sure if it's better to add it to database or raise custom exception GuildNotFound
                     guild = GuildModel(
-                        guild_id=interaction.guild_id, name=interaction.guild.name
+                        id=interaction.guild_id, name=interaction.guild.name
                     )
                     await guild_repository.add_guild(guild)
                     await session.flush()
 
                 translation_channel = TranslationChannelModel(
-                    channel_id=channel.id, language=language, guild_id=guild.id
+                    id=channel.id, language=language, guild_id=guild.id
                 )
 
                 await translation_channel_repository.add_translation_channel(

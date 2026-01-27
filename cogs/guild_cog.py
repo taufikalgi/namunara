@@ -23,15 +23,11 @@ class GuildCog(commands.Cog):
                 async with session.begin():
                     guild_id = guild.id
                     guild_name = guild.name
-                    guild_db = await get_guild_by_guild_id(
-                        session=session, guild_id=guild_id
-                    )
-
-                    # print(f"{guild_db} {guild_db.name} ({guild_db.guild_id})")
+                    guild_db = await get_guild_by_id(session=session, id=guild_id)
 
                     if not guild_db:
                         print(f"Adding guild to DB: {guild.name} ({guild.id})")
-                        new_guild = GuildModel(guild_id=guild_id, name=guild_name)
+                        new_guild = GuildModel(id=guild_id, name=guild_name)
                         await add_guild(session, new_guild)
 
                         print(f"Added new guild: {guild.name} ({guild.id})")
@@ -49,10 +45,8 @@ class GuildCog(commands.Cog):
         try:
             async with async_session() as session:
                 async with session.begin():
-                    guild_db = await get_guild_by_guild_id(
-                        session=session, guild_id=guild.id
-                    )
-                    print(f"{guild_db.name} ({guild_db.guild_id})")
+                    guild_db = await get_guild_by_id(session=session, id=guild.id)
+                    print(f"{guild_db.name} ({guild_db.id})")
 
                     if guild_db:
                         await delete_guild(session=session, guild=guild_db)

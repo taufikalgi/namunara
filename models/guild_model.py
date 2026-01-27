@@ -8,8 +8,7 @@ from .base import Base
 class GuildModel(Base):
     __tablename__ = "guilds"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    guild_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     name: Mapped[str] = mapped_column(String)
     allow_translation: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False

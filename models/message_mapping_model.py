@@ -7,7 +7,7 @@ from .base import Base
 class MessageMappingModel(Base):
     __tablename__ = "message_mappings"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     guild_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     original_message_id: Mapped[int] = mapped_column(
         BigInteger, nullable=False, index=True
