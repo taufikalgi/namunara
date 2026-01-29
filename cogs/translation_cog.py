@@ -136,24 +136,38 @@ class TranslationCog(commands.Cog):
                 )
 
                 if ref_message is not None:
-                    translation_channel_id = (
-                        await translation_channel_repository.get_id_by_channel_id(
-                            session=session, channel_id=target_channel.id
-                        )
-                    )
-                    translated_ref_message = await message_mapping_repository.get_translated_message_by_original_message_id_and_translation_channel_id(
-                        session=session,
-                        original_message_id=ref_message.id,
-                        translation_channel_id=translation_channel_id,
-                    )
-                    if (
-                        translated_ref_message
-                        and translated_ref_message.translated_message_id
-                    ):
-                        print(
-                            f"  -> Found translated reference message id: {translated_ref_message.translated_message_id}"
-                        )
-                        translated += f"\n\n[In reply to this message](https://discord.com/channels/{message.guild.id}/{target_channel.id}/{translated_ref_message.translated_message_id})"
+                    try:
+                        async with async_session() as session:
+                            async with session.begin():
+                                translated_ref_message = await message_mapping_repository.get_translated_message_by_original_message_id_and_translation_channel_id(
+                                    session=session,
+                                    original_message_id=ref_message.id,
+                                    translation_channel_id=target_channel.id,
+                                )
+                                if (
+                                    translated_ref_message
+                                    and translated_ref_message.translated_message_id
+                                ):
+                                    print(
+                                        f"  -> Found translated reference message id: {translated_ref_message.translated_message_id}"
+                                    )
+                                    reference_link = ""
+                                    if (
+                                        translated_ref_message.translation_channel_id
+                                        == target_channel.id
+                                    ):
+                                        reference_link = f"https://discord.com/channels/{message.guild.id}/{target_channel.id}/{translated_ref_message.translated_message_id}"
+                                    elif (
+                                        translated_ref_message.original_channel_id
+                                        == target_channel.id
+                                    ):
+                                        reference_link = f"https://discord.com/channels/{message.guild.id}/{target_channel.id}/{ref_message.id}"
+                                    translated = (
+                                        f"> [In reply to this message]({reference_link})\n\n"
+                                        + translated
+                                    )
+                    except Exception as e:
+                        print(f"  -> Error fetching translated reference message: {e}")
 
                 print(f"  -> Got webhook: {webhook.id}")
                 sent_message = await webhook.send(
